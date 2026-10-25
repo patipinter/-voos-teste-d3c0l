@@ -838,6 +838,53 @@ input,select{font-family:inherit}
  .otl,.tl2{padding-left:8px;padding-right:8px}
 }
 .app{overflow-x:clip}
+.flink{width:100%;max-width:260px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:11px;color:#565a60;background:#fafbfc}
+/* ===== v15: feedback contextual de preço ===== */
+.same2{position:relative;display:block;min-height:18px;margin:4px 0;font-size:12px;line-height:18px;color:#565a60}
+.same2 .tx,.same2 .kp{transition:opacity .25s ease,transform .25s ease}
+.same2 .kp{position:absolute;left:0;top:0;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-weight:500;color:var(--brand);opacity:0;transform:translateY(5px)}
+.same2 .kp i{width:14px;height:14px;border-radius:50%;background:var(--brand);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.same2.flash .tx{opacity:0}
+.same2.flash .kp{opacity:1;transform:none}
+.has-tip:has(.same2){display:block}
+@keyframes pricepulse{0%{transform:scale(1)}35%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes pricepulsec{0%{transform:scale(1)}35%{transform:scale(1.06);color:var(--brand)}100%{transform:scale(1)}}
+.price.pulse.pcol{animation-name:pricepulsec}
+.price.pulse{animation:pricepulse .5s ease;transform-origin:left center}
+/* ===== v16: variações do aviso (Proposta A) ===== */
+.same2.box{background:#F2F4F5;border-radius:8px;padding:10px;min-height:0;color:var(--ink)}
+.same2.box .kp{left:10px;right:10px;top:0;bottom:0;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500}
+.same2.box.green .kp{color:var(--green)}
+.same2.box.purple .kp{color:var(--brand)}
+.same2.box.green .kp i{background:var(--green)}
+.same2.box .kp em{display:inline-flex;font-style:normal}
+.same2.box.pos-r .kp{justify-content:flex-start}
+/* ===== v17: "Preço mantido" sem fundo (A) ===== */
+.same2.box{transition:background-color .25s ease}
+.same2.box.flash{background:transparent}
+.same2.box.flash .kp{left:0;right:0}
+.same2.box .kp{transition:opacity .25s ease,transform .25s ease,left .25s ease}
+/* ===== v18: aviso sem caixa, subida vertical, preço colorido (A) ===== */
+.same2.green,.same2.purple{margin:4px 0 12px;color:#565a60}
+.same2 .kp{transform:translateY(10px);transition:opacity .3s ease,transform .35s cubic-bezier(.2,.8,.2,1)}
+.same2 .tx{transition:opacity .25s ease,transform .3s ease}
+.same2.flash .tx{opacity:0;transform:translateY(-6px)}
+.same2.flash .kp{opacity:1;transform:none}
+.same2.green .kp{color:#08925C}.same2.green .kp i{background:#08925C}
+.same2.purple .kp{color:var(--brand)}.same2.purple .kp i{background:var(--brand)}
+.price,.price *{transition:color .3s ease}
+.price.pc-green,.price.pc-green *{color:#08925C}
+.price.pc-purple,.price.pc-purple *{color:var(--brand)}
+.price.pulse{animation-name:pricepulse}
+/* ===== v20: pílula "Troca de aeroporto" sem encostar no divisor ===== */
+.swpill{padding:1px 8px}
+.fl .stp.swp{bottom:calc(50% + 4px)}
+/* ===== v21: link de tarifas sem divisor/texto, 12px abaixo do Selecionar ===== */
+.incl2{margin-top:6px}
+.incl2 .lk2{gap:0}
+.incl2 .lk2 svg{margin-left:-1px;flex:none}
+/* ===== v22: bolinhas centralizadas na linha (A/B) ===== */
+.v-a .fl .ln i,.v-b .fl .ln i{top:50%;transform:translate(-50%,-50%)}
 </style>
 <div class="scroller notranslate" translate="no" lang="pt-BR"><div class="app" id="app"></div></div>
 <script>
@@ -1062,6 +1109,18 @@ function markSwap(){
     o.stops=1;o.via=pr[0];o.swap={a:pr[0],b:pr[1]};o.swapWait=190+(h+done.length*13)%60;o.dur=Math.max(o.dur,300+(h+done.length*7)%40);
     if([...done,o].every(x=>rank(x)>=7))done.push(o);
     else{Object.assign(o,bak);delete o.swap}
+  }
+  /* troca de aeroporto também em linhas que não são a primeira (ida 2ª/3ª e volta) */
+  const sorted=S.cards.slice().sort(sortFns.rec),rk=c=>S.cards.slice().sort(sortFns.rec).indexOf(c);let n=0;
+  const pool2=sorted.slice(7),mk=c=>[...c.ida,...c.vol].some(x=>x.swap);
+  for(const c of [...pool2.filter(c=>!mk(c)),...pool2.filter(mk)]){
+    if(n>=target)break;
+    if([...c.ida,...c.vol].filter(x=>x.swap).length>=2)continue;
+    const rows=[...c.ida.slice(1),...c.vol].filter(x=>!x.swap),o=rows[n===1?rows.length-1:Math.min(n,rows.length-1)];
+    if(!o)continue;
+    const pr=SWP[(h+3+n)%SWP.length],bak={stops:o.stops,via:o.via,dur:o.dur};
+    o.stops=1;o.via=pr[0];o.swap={a:pr[0],b:pr[1]};o.swapWait=190+(h+n*17)%60;o.dur=Math.max(o.dur,300+(h+n*11)%40);
+    if(rk(c)>=7)n++;else{Object.assign(o,bak);delete o.swap}
   }
 }
 function newSearch(keepFilters){
@@ -1322,14 +1381,21 @@ function detail(o,from,to,c){const sg=segs(o,from,to);
 const infoTip=c=>tipw(`<button class="infob" aria-label="Detalhes do preço">${IC.info(16)}</button>`,`<b>Como o preço é formado</b><span class="tl"><span>Tarifa</span><span>${money(c.price*.855)}</span></span><span class="tl"><span>Taxas e impostos</span><span>${money(c.price*.145)}</span></span><span class="tl g"><span>Total por adulto</span><span>${money(c.price)}</span></span>`,'','r');
 const priceBlock=(c,p)=>`<span class="lbl">Preço total por adulto</span><div class="price"><small>R$</small><b>${num(p)}</b></div><div class="taxes">Taxas e impostos inclusos ${infoTip({price:p})}</div>`;
 const ctaBlock=(c,leg)=>`<div class="cta"><button class="btn" data-a="${leg?'selectleg':'select'}" data-c="${c.id}" ${leg?`data-w="${leg}"`:''}>Selecionar</button>${tipw(`<button class="cartb" data-a="cart" aria-label="Adicionar ao carrinho">${IC.cartPlus(22)}</button>`,'Adicionar ao carrinho','below','r')}</div>`;
+
+/* variações do aviso "Preço mantido" (só Proposta A); B mantém a versão simples */
+function sameNote(){
+  return `<div class="same2 purple" data-pc="1" data-col="purple"><span class="tx">Mesmo preço em qualquer horário desta oferta</span><span class="kp" aria-hidden="true"><i>${IC.check2(10)}</i>Preço mantido</span></div>`}
 function cardAB(c){const s=selFor(c);
   const left=legHd('ida',c,c._tags)+c.ida.map(o=>optRow(o,'ida',c,s.i)).join('')+(c.vol.length?legHd('vol',c,[])+c.vol.map(o=>optRow(o,'vol',c,s.v)).join(''):'');
   return `<article class="card" data-card="${c.id}"><div class="lft">${left}</div><div class="rgt">${priceBlock(c,c.price)}
-   ${(c.ida.length===1&&c.vol.length<=1)?'':tipw(`<div class="same"><span class="ck2">${IC.check2(11)}</span><span>Mesmo preço para qualquer um dos horários</span></div>`,'O preço final é o mesmo para qualquer combinação de horários desta oferta.','below','l')}
+   ${(c.ida.length===1&&c.vol.length<=1)?'':sameNote()}
    ${ctaBlock(c)}
-   <div class="incl"><span>Este voo inclui uma bagagem de mão e mochila${c.chk?' e uma bagagem despachada':''}</span><button class="lk2" data-a="modal" data-m="fares" data-c="${c.id}">Ver tarifas e bagagem ${IC.chevR(16)}</button></div></div></article>`}
+   <div class="incl2"><button class="lk2" data-a="modal" data-m="fares" data-c="${c.id}">Ver tarifas e bagagem ${IC.chevR(20)}</button></div></div></article>`}
 function cardSep(c,w){const s=selFor(c),list=c[w],sel=w==='ida'?s.i:s.v,p=Math.round(c.price/2);
-  return `<article class="card" data-card="${c.id}"><div class="lft">${legHd(w,c,[])}${list.map(o=>optRow(o,w,c,sel)).join('')}</div><div class="rgt">${priceBlock(c,p)}${ctaBlock(c,w)}</div></article>`}
+  return `<article class="card" data-card="${c.id}"><div class="lft">${legHd(w,c,[])}${list.map(o=>optRow(o,w,c,sel)).join('')}</div><div class="rgt">${priceBlock(c,p)}
+   ${list.length>1?sameNote():''}
+   ${ctaBlock(c,w)}
+   <div class="incl2"><button class="lk2" data-a="modal" data-m="fares" data-c="${c.id}" data-w="${w}">Ver tarifas e bagagem ${IC.chevR(20)}</button></div></div></article>`}
 const fdurO=m=>`${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`;
 const fOrig=d=>`${DOW[d.getDay()]}. ${d.getDate()} ${MON3[d.getMonth()]}. ${d.getFullYear()}`;
 const chevD=()=>IC.chev(22);
@@ -1429,7 +1495,7 @@ function rOv(){
     }else if(m.t==='fares'){
       const c=S.cards.find(x=>x.id===m.c);title='Tarifas e bagagem';
       const F=[['basic','Básica',0,[['Mochila sob o assento',1],['Bagagem de mão de 10 kg',1],['Bagagem despachada de 23 kg',0],['Remarcação sem multa',0],['Reembolso',0]]],['comfort','Conforto',140,[['Mochila sob o assento',1],['Bagagem de mão de 10 kg',1],['Bagagem despachada de 23 kg',1],['Remarcação sem multa',0],['Reembolso',0]]],['flex','Flex',280,[['Mochila sob o assento',1],['Bagagem de mão de 10 kg',1],['Bagagem despachada de 23 kg',1],['Remarcação sem multa',1],['Reembolso',1]]]];
-      body=`<p style="margin:0;color:var(--ink2)">O preço por adulto muda só com a tarifa. Os horários que você escolheu não alteram o valor.</p><div class="fares">${F.map(([k,n,_a,it])=>{const add=fareAdd(c,k),dis=add===null;return `<div class="fare ${k==='comfort'?'rec':''} ${dis?'dis':''}">${k==='comfort'?'<span class="tagr">Mais escolhida</span>':''}<h4>${n}</h4><div class="fp">${dis?'Indisponível':add===0?'R$ 0':'+ '+money(add)}<small>${dis?'Esta oferta já inclui bagagem despachada':'por adulto, além do preço do voo'}</small></div><ul>${it.map(([t,ok])=>`<li class="${ok?'':'no'}"><span class="${ok?'ok':'nok'}">${ok?IC.check(16):IC.close(16)}</span>${t}</li>`).join('')}</ul><button class="btn sm ${k==='comfort'?'':'line'}" data-a="selectfare" data-c="${c.id}" data-k="${k}" ${dis?'disabled':''}>Escolher</button></div>`}).join('')}</div>`;
+      const lw=m.w;body=`<p style="margin:0;color:var(--ink2)">${lw?`As tarifas abaixo valem só para o voo de ${lw==='ida'?'ida':'volta'}. Você escolhe a tarifa depois de selecionar os voos.`:'O preço por adulto muda só com a tarifa. Os horários que você escolheu não alteram o valor.'}</p><div class="fares">${F.map(([k,n,_a,it])=>{const add=fareAdd(c,k),dis=add===null;return `<div class="fare ${k==='comfort'?'rec':''} ${dis?'dis':''}">${k==='comfort'?'<span class="tagr">Mais escolhida</span>':''}<h4>${n}</h4><div class="fp">${dis?'Indisponível':add===0?'R$ 0':'+ '+money(lw?Math.round(add/2):add)}<small>${dis?'Esta oferta já inclui bagagem despachada':lw?'por adulto, além do preço deste voo':'por adulto, além do preço do voo'}</small></div><ul>${it.map(([t,ok])=>`<li class="${ok?'':'no'}"><span class="${ok?'ok':'nok'}">${ok?IC.check(16):IC.close(16)}</span>${t}</li>`).join('')}</ul>${lw?'':`<button class="btn sm ${k==='comfort'?'':'line'}" data-a="selectfare" data-c="${c.id}" data-k="${k}" ${dis?'disabled':''}>Escolher</button>`}</div>`}).join('')}</div>`;
     }else if(m.t==='alert'){
       title='Criar alerta de preço';nrw='nrw';
       body=`<p style="margin:0;color:var(--ink2)">Avisamos por e-mail quando o preço de ${cityName(S.route.o)} → ${cityName(S.route.d)} cair.</p><div class="fld2"><label for="al-mail">Seu e-mail</label><input id="al-mail" class="inp2" type="email" placeholder="nome@exemplo.com"></div><div style="display:flex;justify-content:flex-end;gap:10px"><button class="btn line sm" data-a="closemodal">Cancelar</button><button class="btn sm" data-a="alertok">Criar alerta</button></div>`;
@@ -1457,14 +1523,15 @@ function rNext(){
 }
 
 /* ========= launcher ========= */
-const SHARE_DEF='https://claude.ai/artifact/BCNR9PgSg55WAWfS3LKvSE';
-const shareBase=()=>{let v='';try{v=localStorage.getItem('shareBase')||''}catch(e){}return (v||SHARE_DEF).trim().split('#')[0]};
+const SHARE_DEF='https://patipinter.github.io/-voos-teste-d3c0l/';
+const selfHost=()=>/(github\.io|netlify\.app|pages\.dev|vercel\.app)$/.test(location.hostname);
+const shareBase=()=>{let v='';try{v=localStorage.getItem('shareBase2')||''}catch(e){}return (selfHost()?location.href:(v||SHARE_DEF)).trim().split('#')[0]};
 const ORDER_ROWS=[['P1',['orig-c1','b-c2','a-c3']],['P2',['b-c1','a-c2','orig-c3']],['P3',['a-c1','orig-c2','b-c3']]];
 function rLauncher(){
   const base=shareBase();
   $('#body').innerHTML=`<div class="launch"><div><h1>Painel do teste</h1><p>Esta tela é só para você. Os participantes recebem um link com o código da versão e do cenário (por exemplo <code>#b-c2</code>) e abrem direto na lista de resultados, sem nenhum filtro aplicado. Nada aqui aparece para eles.</p></div>
   <div class="scen">${Object.entries(SCEN).map(([k,s])=>`<div><b>Cenário C${k}</b><span>${cityName(s.o)} (${s.o}) → ${cityName(s.d)} (${s.d})</span><span>Ida ${fLong(pIso(s.ida))} · volta ${fLong(pIso(s.volta))}</span></div>`).join('')}</div>
-  <table class="lt"><thead><tr><th>Participante</th><th>1ª tela</th><th>2ª tela</th><th>3ª tela</th></tr></thead><tbody>${ORDER_ROWS.map(([p,ts])=>`<tr><td><b style="font-weight:500">${p}</b></td>${ts.map(t=>{const [v,c]=t.split('-');return `<td><div style="display:flex;flex-direction:column;gap:6px"><span>${v==='orig'?'Versão original':'Versão '+v.toUpperCase()} · ${c.toUpperCase()}</span><code>#${t}</code><span class="acts"><button data-a="open" data-t="${t}">Abrir</button><button data-a="copy" data-t="${t}">Copiar link</button></span></div></td>`}).join('')}</tr>`).join('')}</tbody></table>
+  <table class="lt"><thead><tr><th>Participante</th><th>1ª tela</th><th>2ª tela</th><th>3ª tela</th></tr></thead><tbody>${ORDER_ROWS.map(([p,ts])=>`<tr><td><b style="font-weight:500">${p}</b></td>${ts.map(t=>{const [v,c]=t.split('-');return `<td><div style="display:flex;flex-direction:column;gap:6px"><span>${v==='orig'?'Versão original':'Versão '+v.toUpperCase()} · ${c.toUpperCase()}</span><input class="flink" readonly data-t="${t}" value="${esc(base)}#${t}" onfocus="this.select()" aria-label="Link completo"><span class="acts"><button data-a="open" data-t="${t}">Abrir</button><button data-a="copy" data-t="${t}">Copiar link</button></span></div></td>`}).join('')}</tr>`).join('')}</tbody></table>
   <div class="hint">Atalho dentro do protótipo: <b>Option + Shift + M</b> volta para este painel. Chame as versões de "Versão 1, 2 e 3" com os participantes e não diga qual é a original.</div>
   <div class="hint">Endereço base dos links (já preenchido com o link do protótipo; se o Share gerar outro endereço, cole-o aqui):<br><input id="sbase" data-a="sharebase" value="${esc(base)}" style="width:100%;max-width:560px;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13px"></div></div>`;
 }
@@ -1560,9 +1627,9 @@ document.addEventListener('click',e=>{
    case 'trendpick':S.tm=+D.x;rPanelOnly();break;
    case 'seg':if(S.mode!==D.k){S.mode=D.k;S.stage='ida';S.pick=null;S.shown=9;rLHead();rStep();rList()}break;
    case 'stepback':S.stage='ida';S.pick=null;rStep();rList();break;
-   case 'pick':{const s=S.sel[D.c]||(S.sel[D.c]={});if(D.w==='ida')s.i=D.id;else s.v=D.id;rList();break}
+   case 'pick':{const s=S.sel[D.c]||(S.sel[D.c]={});const prev=D.w==='ida'?s.i:s.v;if(D.w==='ida')s.i=D.id;else s.v=D.id;rList();if(prev!==D.id)flashPrice(D.c);break}
    case 'xp':e.stopPropagation();S.open[D.id]=!S.open[D.id];rList();break;
-   case 'modal':S.modal={t:D.m,c:D.c,id:D.id};rOv();break;
+   case 'modal':S.modal={t:D.m,c:D.c,id:D.id,w:D.w};rOv();break;
    case 'scrim':if(e.target===t){S.modal=null;rOv()}break;
    case 'closemodal':S.modal=null;rOv();break;
    case 'fav':S.fav[D.c]=!S.fav[D.c];t.setAttribute('aria-pressed',!!S.fav[D.c]);if(S.fav[D.c])toast('Voo salvo nos favoritos');break;
@@ -1584,7 +1651,7 @@ document.addEventListener('click',e=>{
    case 'alert':S.modal={t:'alert'};rOv();break;
    case 'alertok':S.modal=null;rOv();toast('Alerta criado','Avisamos por e-mail quando o preço cair');break;
    case 'open':location.hash=D.t;break;
-   case 'copy':{const link=shareBase()+'#'+D.t;const done=()=>toast('Link copiado.');if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(link).then(done,()=>toast(link));else toast(link);break}
+   case 'copy':{const link=shareBase()+'#'+D.t;const done=()=>toast('Link copiado.');const fb=()=>{try{const ta=document.createElement('textarea');ta.value=link;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();ok?done():toast(link)}catch(err){toast(link)}};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(link).then(done,fb);else fb();break}
   }
 });
 document.addEventListener('change',e=>{
@@ -1599,7 +1666,7 @@ document.addEventListener('change',e=>{
   if(t.id==='cls-sel'){S.draft.cls=t.value;repaintFields()}
 });
 document.addEventListener('input',e=>{
-  if(e.target.id==='sbase'){try{localStorage.setItem('shareBase',e.target.value)}catch(err){}return}
+  if(e.target.id==='sbase'){try{localStorage.setItem('shareBase2',e.target.value)}catch(err){}$$('.flink').forEach(i=>i.value=shareBase()+'#'+i.dataset.t);return}
   const t=e.target;
   if(t.dataset.a==='rng'){const k=t.dataset.k,i=+t.dataset.i,f=S.f;let arr=k==='price'?[f.pmin,f.pmax]:f[k];arr=[...arr];let v=+t.value;const gap=k==='price'?10:(k.startsWith('d')?15:20);
     if(i===0)v=Math.min(v,arr[1]-gap);else v=Math.max(v,arr[0]+gap);arr[i]=v;t.value=v;
@@ -1623,6 +1690,16 @@ mkApp();onHash();
 
 document.addEventListener('mouseover',e=>{const b=e.target.closest('[data-a=calday]');if(!b||!S.draft||S.draft.trip==='ow'||S.calSel!=='volta'||!S.draft.ida)return;const dt=b.dataset.d,i0=iso(S.draft.ida);
   $$('[data-a=calday]').forEach(x=>{const d=x.dataset.d;x.classList.toggle('prev',d>i0&&d<dt);x.classList.toggle('prevend',d===dt&&d>i0)})});
+
+/* feedback contextual: preço mantido ao trocar horário (A/B) */
+const _pkT={};
+function flashPrice(id){const card=document.querySelector(`[data-card="${id}"]`),sm=card&&card.querySelector('.same2');if(!sm)return;
+  const pr=card.querySelector('.price');clearTimeout(_pkT[id]);
+  if(pr){pr.classList.remove('pulse','pc-green','pc-purple');void pr.offsetWidth;pr.classList.add('pulse','pc-'+(sm.dataset.col||'purple'))}
+  sm.classList.add('flash');
+  let lv=document.getElementById('plive');if(!lv){lv=document.createElement('div');lv.id='plive';lv.setAttribute('aria-live','polite');lv.className='sr-only';lv.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)';document.body.appendChild(lv)}
+  lv.textContent='';setTimeout(()=>{lv.textContent='Preço mantido: o valor é o mesmo para qualquer horário'},50);
+  _pkT[id]=setTimeout(()=>{sm.classList.remove('flash');if(pr)pr.classList.remove('pulse','pc-green','pc-purple')},2500)}
 </script>
 
 </body></html>
