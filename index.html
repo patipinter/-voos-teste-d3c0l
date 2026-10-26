@@ -885,6 +885,16 @@ input,select{font-family:inherit}
 .incl2 .lk2 svg{margin-left:-1px;flex:none}
 /* ===== v22: bolinhas centralizadas na linha (A/B) ===== */
 .v-a .fl .ln i,.v-b .fl .ln i{top:50%;transform:translate(-50%,-50%)}
+/* ===== v23: filtro Companhias, respiro dos filtros e siglas das paradas ===== */
+.airl{display:inline-flex;align-items:center;gap:14px}
+.v-a .fsec,.v-b .fsec{padding-bottom:16px}
+.v-a .fl .stp,.v-b .fl .stp{container-type:inline-size}
+.fl .stp .vs{display:none}
+@container (max-width:119px){.via.n2 .vf{display:none}.via.n2 .vs{display:inline}}
+@container (max-width:149px){.via.n3 .vf{display:none}.via.n3 .vs{display:inline}}
+@container (max-width:105px){.via.n2,.via.n3{display:none}}
+/* ===== v24: respiro só com o bloco aberto ===== */
+.v-a .fsec.closed,.v-b .fsec.closed{padding-bottom:8px}
 </style>
 <div class="scroller notranslate" translate="no" lang="pt-BR"><div class="app" id="app"></div></div>
 <script>
@@ -1089,10 +1099,10 @@ const S={
   v:'b',c:1,view:'results',route:{o:'FLN',d:'SSA'},dates:{ida:pIso('2026-11-04'),volta:pIso('2026-11-12')},base:{ida:pIso('2026-11-04'),volta:pIso('2026-11-12')},
   trip:'rt',pax:{adt:1,chd:0,cls:'Econômica'},draft:null,cards:[],sort:'rec',mode:'group',stage:'ida',pick:null,
   sel:{},open:{},shown:9,panel:null,searchOpen:false,loading:false,cart:1,modal:null,drawer:null,prodOpen:false,toast:null,ordOpen:false,
-  fclosed:{stops:true,bag:true,hr:true,dur:true},pop:null,q:'',calOff:0,calSel:'ida',tm:0,fav:{},
+  fclosed:{stops:true,bag:true,hr:true,dur:true,air:true},pop:null,q:'',calOff:0,calSel:'ida',tm:0,fav:{},
   f:null,tariff:'basic',chosen:null,alertOk:false,hist:['GRU','REC']
 };
-function defFilters(){return {stops:'all',bag:'all',air:{Azul:1,Gol:1,LATAM:1},cab:{'Econômica':1,'Premium Economy':1,'Executiva':1},pmin:0,pmax:99999,hi:[...FULL.hi],hv:[...FULL.hv],di:[...FULL.di],dv:[...FULL.dv],act:{}}}
+function defFilters(){return {stops:'all',bag:'all',air:{Azul:1,Gol:1,LATAM:1},airExp:false,cab:{'Econômica':1,'Premium Economy':1,'Executiva':1},pmin:0,pmax:99999,hi:[...FULL.hi],hv:[...FULL.hv],di:[...FULL.di],dv:[...FULL.dv],act:{}}}
 function flatItems(vis){const flat=[];vis.forEach(c=>{const n=Math.max(c.ida.length,c.vol.length||1);for(let k=0;k<Math.min(n,2);k++)flat.push({c,i:c.ida[Math.min(k,c.ida.length-1)],v:c.vol.length?c.vol[Math.min(k,c.vol.length-1)]:null})});const seen=new Set();return flat.filter(x=>{const k=x.i.id+'|'+(x.v?x.v.id:'');if(seen.has(k))return false;seen.add(k);return true})}
 const countF=mod=>{const f=JSON.parse(JSON.stringify(S.f));mod(f);return S.cards.filter(c=>visible(c,f)).length};
 function assignBags(){const sorted=S.cards.slice().sort(sortFns.rec),n=sorted.length,k=Math.round(n*0.2),r=rng(hash(S.route.o+S.route.d+S.v+'bag')),pos=[6];let guard=0;
@@ -1263,13 +1273,20 @@ function chips(){const f=S.f,o=[];
   if(f.act.dv)o.push(['dv',`Duração de volta: até ${hm(f.dv[1])}`]);
   if(f.stops!=='all')o.push(['stops',f.stops==='0'?'Direto':f.stops==='1'?'1 parada':'2 ou mais paradas']);
   if(f.bag!=='all')o.push(['bag',f.bag==='chk'?'Bagagem para despachar':'Bagagem de mão']);
-  Object.keys(f.air).filter(k=>!f.air[k]).forEach(k=>o.push(['air:'+k,'Sem '+k]));
+  if(!AIRL.every(a=>f.air[a]))o.push(['airs','Companhias: '+AIRL.filter(a=>f.air[a]).join(', ')]);
   if(f.act.price)o.push(['price',`Até ${money(f.pmax)}`]);
   return o}
 function ck(name,checked,label,count,extra=''){if(count===0&&!checked)extra+=' dis';return `<label class="ck ${extra}"><input type="checkbox" ${checked?'checked':''} ${count===0&&!checked?'disabled':''} data-a="fck" data-n="${name}"><span class="box">${checked?IC.check(14):''}</span><span>${label}</span>${count!=null?`<span class="n">${count}</span>`:''}</label>`}
 function dual(k,rg,val,step){return `<div class="dual" data-k="${k}"><div class="tr"></div><div class="fl2" style="left:${(val[0]-rg[0])/(rg[1]-rg[0])*100}%;right:${100-(val[1]-rg[0])/(rg[1]-rg[0])*100}%"></div>
   <input type="range" data-a="rng" data-k="${k}" data-i="0" min="${rg[0]}" max="${rg[1]}" step="${step}" value="${val[0]}" aria-label="${k} mínimo"><input type="range" data-a="rng" data-k="${k}" data-i="1" min="${rg[0]}" max="${rg[1]}" step="${step}" value="${val[1]}" aria-label="${k} máximo"></div>`}
 function fsec(id,title,inner,cnt=0){const cl=S.fclosed[id];return `<div class="fsec ${cl?'closed':''}"><button class="hd" data-a="fsec" data-n="${id}" aria-expanded="${!cl}"><span>${title}${cnt?` (${cnt})`:''}</span>${IC.chev(18)}</button><div class="fbody">${inner}</div></div>`}
+const AIRL=['Azul','Gol','LATAM'];
+const fdd=m=>S.v==='orig'?fdur(m)+'m':fdur(m);
+function airSec(){const f=S.f,all=AIRL.every(a=>f.air[a]),orig=S.v==='orig';
+  const cntA=a=>countF(g=>{g.air={Azul:0,Gol:0,LATAM:0};g.air[a]=1});
+  const lab=a=>orig?`<span class="airl">${alogo(a)}<span>${a}</span></span>`:a;
+  if(!orig){const ex=!!f.airExp;return fsec('air','Companhias',AIRL.map(a=>ck('air:'+a,ex&&!!f.air[a],lab(a),cntA(a))).join(''),ex?AIRL.filter(a=>f.air[a]).length:0)}
+  return fsec('air','Companhias',`${ck('air:all',all,'Todas as companhias',countF(g=>g.air={Azul:1,Gol:1,LATAM:1}))}${AIRL.map(a=>ck('air:'+a,!!f.air[a],lab(a),cntA(a))).join('')}`,all?0:AIRL.filter(a=>f.air[a]).length)}
 function rSide(){const f=S.f,n=S.cards.length,cs=S.cards;
   const cnt=fn=>cs.filter(fn).length;
   const ch=chips();
@@ -1284,8 +1301,9 @@ function rSide(){const f=S.f,n=S.cards.length,cs=S.cards;
    ${fsec('price','Preço',`${dual('price',[S.pLo,S.pHi],[f.pmin,f.pmax],10)}<div class="rngl"><span id="pl0">${money(f.pmin)}</span><span id="pl1">${money(f.pmax)}</span></div>`,f.act.price?1:0)}
    ${fsec('hr','Horário',`<div class="vsub"><span class="legtag">${IC.planeTO(12)}Ida</span><span>Voo para <b>${cityName(S.route.d)}</b></span></div>${dual('hi',FULL.hi,f.hi,5)}<div class="rngl"><span id="hl0">${ftime(f.hi[0])}</span><span class="mid">${fShort(S.dates.ida)}</span><span id="hl1">${ftime(f.hi[1])}</span></div>
      ${S.trip==='rt'?`<div class="vsub" style="margin-top:16px"><span class="legtag">${IC.land(12)}Volta</span><span>Voo para <b>${cityName(S.route.o)}</b></span></div>${dual('hv',FULL.hv,f.hv,5)}<div class="rngl"><span id="vl0">${ftime(f.hv[0])}</span><span class="mid">${fShort(S.dates.volta)}</span><span id="vl1">${ftime(f.hv[1])}</span></div>`:''}`,hCnt)}
-   ${fsec('dur','Duração',`<div class="vsub"><span class="legtag">${IC.planeTO(12)}Ida</span><span>Voo para <b>${cityName(S.route.d)}</b></span></div>${dual('di',FULL.di,f.di,5)}<div class="rngl"><span id="dl0">${fdur(f.di[0])}m</span><span id="dl1">${fdur(f.di[1])}m</span></div>
-     ${S.trip==='rt'?`<div class="vsub" style="margin-top:16px"><span class="legtag">${IC.land(12)}Volta</span><span>Voo para <b>${cityName(S.route.o)}</b></span></div>${dual('dv',FULL.dv,f.dv,5)}<div class="rngl"><span id="el0">${fdur(f.dv[0])}m</span><span id="el1">${fdur(f.dv[1])}m</span></div>`:''}`,dCnt)}
+   ${fsec('dur','Duração',`<div class="vsub"><span class="legtag">${IC.planeTO(12)}Ida</span><span>Voo para <b>${cityName(S.route.d)}</b></span></div>${dual('di',FULL.di,f.di,5)}<div class="rngl"><span id="dl0">${fdd(f.di[0])}</span><span id="dl1">${fdd(f.di[1])}</span></div>
+     ${S.trip==='rt'?`<div class="vsub" style="margin-top:16px"><span class="legtag">${IC.land(12)}Volta</span><span>Voo para <b>${cityName(S.route.o)}</b></span></div>${dual('dv',FULL.dv,f.dv,5)}<div class="rngl"><span id="el0">${fdd(f.dv[0])}</span><span id="el1">${fdd(f.dv[1])}</span></div>`:''}`,dCnt)}
+   ${airSec()}
   </div>`;
   $('#side').innerHTML=h;
 }
@@ -1365,7 +1383,7 @@ function legHd(w,c,tags){const o=S.route;const from=w==='ida'?o.o:o.d,to=w==='id
   const tg={rec:['Recomendado','Melhor equilíbrio entre preço, duração e paradas'],cheap:['Mais barato','Menor preço entre os voos listados'],fast:['Mais rápido','Menor tempo total de viagem']};
   return `<div class="leghd"><span class="legic">${w==='ida'?IC.planeTO(20):IC.land(20)}</span><span class="legtxt"><b>${w==='ida'?'IDA':'VOLTA'}</b>${fLong(dt)}<i></i>${from} → ${to}</span>
    ${tags&&tags.length?`<span class="tags">${tags.map((k,i)=>tipw(`<span class="rectag ${k==='rec'?'':'t2'}">${tg[k][0]}</span>`,tg[k][1],'below','r')).join('')}</span>`:''}</div>`}
-function stpLabel(o){if(o.stops>1){const h=o.via.split(' e ');return `${o.stops} paradas <span class="via">${h[0]} +${h.length-1}</span>`}return `${stopsTxt(o)}${o.stops?` <span class="via">${esc(o.via)}</span>`:''}`}
+function stpLabel(o){if(o.stops>1){const h=o.via.split(' e ');if(S.v==='orig')return `${o.stops} paradas <span class="via">${h[0]} +${h.length-1}</span>`;return `${o.stops} paradas <span class="via n${h.length}"><span class="vf">${h.join(', ')}</span><span class="vs">${h[0]} +${h.length-1}</span></span>`}return `${stopsTxt(o)}${o.stops?` <span class="via">${esc(o.via)}</span>`:''}`}
 const lnHtml=o=>{if(S.v==='orig'&&o.stops>0){const n=o.stops;return `<span class="ln">${Array.from({length:n},(_,k)=>`<i style="left:calc(50% + ${((k-(n-1)/2)*14)}px)"></i>`).join('')}</span>`}return `<span class="ln"><i class="${o.swap?'sw':''}" style="${o.swap?'background:var(--amber);border-color:var(--amber)':''}"></i></span>`};
 function routeLine(o){if(S.v==='orig'&&o.swap)return `<span class="fl has-tip st osw" tabindex="0"><span class="stp">${stopsTxt(o)}<span class="swi">${IC.warn(16)}</span></span><span class="ln"><i></i></span><span class="tip below">${connTip(o)}</span></span>`;return `<span class="fl has-tip ${o.swap?'sw':o.stops?'st':'dir'}" tabindex="0"><span class="stp ${o.stops?'':'dir'} ${o.swap?'swp':''}">${o.swap?'<span class="swpill">Troca de aeroporto</span>':stpLabel(o)}</span>${lnHtml(o)}<span class="tip below">${connTip(o)}</span></span>`}
 function optRow(o,w,c,sel,first){const on=sel===o.id,from=w==='ida'?S.route.o:S.route.d,to=w==='ida'?S.route.d:S.route.o;
@@ -1556,7 +1574,7 @@ function setToken(t){
   const [v,c]=(t||'').split('-');
   if(!['orig','a','b'].includes(v)||!/^c[123]$/.test(c||'')){S.view='launcher';return}
   const sc=SCEN[c.slice(1)];
-  Object.assign(S,{v,c:+c.slice(1),view:'results',route:{o:sc.o,d:sc.d},dates:{ida:pIso(sc.ida),volta:pIso(sc.volta)},base:{ida:pIso(sc.ida),volta:pIso(sc.volta)},trip:'rt',pax:{adt:1,chd:0,cls:'Econômica'},sort:'rec',mode:'group',panel:v==='orig'?'air':null,searchOpen:false,prodOpen:false,ordOpen:false,pop:null,modal:null,drawer:null,draft:mkDraft0(sc),tariff:'basic',chosen:null,fclosed:{stops:true,bag:true,hr:true,dur:true},fav:{},tm:0});
+  Object.assign(S,{v,c:+c.slice(1),view:'results',route:{o:sc.o,d:sc.d},dates:{ida:pIso(sc.ida),volta:pIso(sc.volta)},base:{ida:pIso(sc.ida),volta:pIso(sc.volta)},trip:'rt',pax:{adt:1,chd:0,cls:'Econômica'},sort:'rec',mode:'group',panel:v==='orig'?'air':null,searchOpen:false,prodOpen:false,ordOpen:false,pop:null,modal:null,drawer:null,draft:mkDraft0(sc),tariff:'basic',chosen:null,fclosed:{stops:true,bag:true,hr:true,dur:true,air:true},fav:{},tm:0});
   S.draft=mkDraft();
   newSearch(false);
 }
@@ -1571,6 +1589,7 @@ function closeAll(){let hd=false;
 function resetFilter(k){const f=S.f;
   if(k==='hi'){f.hi=[...FULL.hi];delete f.act.hi}else if(k==='hv'){f.hv=[...FULL.hv];delete f.act.hv}else if(k==='dv'){f.dv=[...FULL.dv];delete f.act.dv}else if(k==='di'){f.di=[...FULL.di];delete f.act.di}
   else if(k==='stops')f.stops='all';else if(k==='bag')f.bag='all';else if(k==='price'){f.pmin=S.pLo;f.pmax=S.pHi;delete f.act.price}
+  else if(k==='airs'){f.air={Azul:1,Gol:1,LATAM:1};f.airExp=false}
   else if(k.startsWith('air:'))f.air[k.slice(4)]=1}
 function applySearch(){
   const d=S.draft;
@@ -1659,7 +1678,9 @@ document.addEventListener('change',e=>{
   if(t.dataset.a==='fck'){const [k,v]=t.dataset.n.split(':'),f=S.f;
     if(k==='stops')f.stops=(f.stops===v&&v!=='all')?'all':v;
     else if(k==='bag')f.bag=(f.bag===v&&v!=='all')?'all':v;
-    else if(k==='air'){f.air[v]=f.air[v]?0:1;if(!Object.values(f.air).some(Boolean))f.air[v]=1}
+    else if(k==='air'){const A1=()=>({Azul:1,Gol:1,LATAM:1});
+      if(S.v!=='orig'){if(!f.airExp){f.air={Azul:0,Gol:0,LATAM:0};f.air[v]=1;f.airExp=true}else{f.air[v]=f.air[v]?0:1;if(!AIRL.some(a=>f.air[a])){f.air=A1();f.airExp=false}}}
+      else if(v==='all')f.air=A1();else{f.air[v]=f.air[v]?0:1;if(!AIRL.some(a=>f.air[a]))f.air=A1()}}
     else if(k==='cab'){f.cab[v]=f.cab[v]?0:1}
     refreshFilters();return}
   if(t.dataset.a==='rng'){rSide();return}
@@ -1671,7 +1692,7 @@ document.addEventListener('input',e=>{
   if(t.dataset.a==='rng'){const k=t.dataset.k,i=+t.dataset.i,f=S.f;let arr=k==='price'?[f.pmin,f.pmax]:f[k];arr=[...arr];let v=+t.value;const gap=k==='price'?10:(k.startsWith('d')?15:20);
     if(i===0)v=Math.min(v,arr[1]-gap);else v=Math.max(v,arr[0]+gap);arr[i]=v;t.value=v;
     if(k==='price'){f.pmin=arr[0];f.pmax=arr[1];if(f.pmin>S.pLo||f.pmax<S.pHi)f.act.price=1;else delete f.act.price;$('#pl0').textContent=money(arr[0]);$('#pl1').textContent=money(arr[1])}
-    else{f[k]=arr;f.act[k]=1;const ids={hi:['hl',ftime],hv:['vl',ftime],di:['dl',m=>fdur(m)+'m'],dv:['el',m=>fdur(m)+'m']}[k];$('#'+ids[0]+'0').textContent=ids[1](arr[0]);$('#'+ids[0]+'1').textContent=ids[1](arr[1])}
+    else{f[k]=arr;if(S.v==='orig'||arr[0]!==FULL[k][0]||arr[1]!==FULL[k][1])f.act[k]=1;else delete f.act[k];const ids={hi:['hl',ftime],hv:['vl',ftime],di:['dl',fdd],dv:['el',fdd]}[k];$('#'+ids[0]+'0').textContent=ids[1](arr[0]);$('#'+ids[0]+'1').textContent=ids[1](arr[1])}
     const box=t.closest('.dual'),lo=+box.querySelector('input').min,hi=+box.querySelector('input').max,fl=box.querySelector('.fl2');
     fl.style.left=(arr[0]-lo)/(hi-lo)*100+'%';fl.style.right=100-(arr[1]-lo)/(hi-lo)*100+'%';
     rLHead();rList();return}
